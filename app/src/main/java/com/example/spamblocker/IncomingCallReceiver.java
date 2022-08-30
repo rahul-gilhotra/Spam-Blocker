@@ -2,15 +2,28 @@ package com.example.spamblocker;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.os.Build;
+import android.provider.ContactsContract;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
+import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
+
+import com.google.gson.Gson;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashSet;
 
 import static com.example.spamblocker.MainActivity.flag140;
 import static com.example.spamblocker.MainActivity.flaghidden;
@@ -18,11 +31,12 @@ import static com.example.spamblocker.MainActivity.flagoutsideIndia;
 import static com.example.spamblocker.MainActivity.flagoutsidephonebook;
 import static com.example.spamblocker.MainActivity.textInputLayout;
 
-public class IncomingCallReceiver extends BroadcastReceiver {
-
+public class IncomingCallReceiver extends BroadcastReceiver
+{
     @RequiresApi(api = Build.VERSION_CODES.P)
     @Override
     public void onReceive(Context context, Intent intent) {
+
         String value = String.valueOf(textInputLayout.getEditText().getText());
         boolean cutMethod = value.equals("Reject Automatically") ? true : false;
 
@@ -35,17 +49,28 @@ public class IncomingCallReceiver extends BroadcastReceiver {
 
             if (state.equalsIgnoreCase(TelephonyManager.EXTRA_STATE_RINGING))
             {
-                if(shouldBlock(number))
+                int shouldblockresult = shouldBlock(number,context);
+                Toast.makeText(context,String.valueOf(shouldblockresult),Toast.LENGTH_LONG).show();
+                if(shouldblockresult>-4)
                 {
                     if(cutMethod) hangUp(context);
-                    else silenceTheCall();
+                    else silenceTheCall(context);
+
+                    String pattern = "MM/dd/yyyy HH:mm:ss";
+                    DateFormat df = new SimpleDateFormat(pattern);
+                    Date today = Calendar.getInstance().getTime();
+                    String todayAsString = df.format(today);
+
+
+                    Info info = new Info(number,todayAsString,String.valueOf(shouldblockresult));
+                    saveData(context,info);
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    public boolean shouldBlock(String number)
+    public int shouldBlock(String number, Context context)
     {
 
         boolean cut140 = flag140.isChecked();
@@ -53,14 +78,37 @@ public class IncomingCallReceiver extends BroadcastReceiver {
         boolean cuthidden = flaghidden.isChecked();
         boolean cutoutofcontacts = flagoutsidephonebook.isChecked();
 
-        if(cut140 && number.substring(0,6)=="+91140") return true;
+        if(cut140 && number.substring(0,6)=="+91140") return 1;
 
-        if(cutforeign && number.substring(0,4)!="+91") return true;
+        if(cutforeign && !number.startsWith("+91")) return 2;
 
-        if(cuthidden && number=="null") return true;
+        if(cuthidden && number==null) return 3;
 
-        return true;
+        if(cutoutofcontacts)
+        {
+            HashSet<String> contactNumbers = getContacts(context);
+
+            if(contactNumbers.contains(number)) return -1;
+            if(contactNumbers.contains(number.substring(3,8)+" "+number.substring(8))) return -1;
+            return 4;
+        }
+        return -1;
     }
+    public void saveData(Context context, Info info)
+    {
+        TinyDB tinyDB = new TinyDB(context);
+        Gson gson = new Gson();
+        String json = gson.toJson(info);
+
+        ArrayList<String> data = tinyDB.getListString("callLogs");
+        if(data==null) data = new ArrayList<>();
+
+        data.add(json);
+        tinyDB.putListString("callLogs",data);
+
+        Toast.makeText(context, "array list : "+data, Toast.LENGTH_SHORT).show();
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.P)
     public void hangUp(Context context)
     {
@@ -71,11 +119,43 @@ public class IncomingCallReceiver extends BroadcastReceiver {
                 return;
             }
             boolean success = tm.endCall();
-            return;
         }
     }
-    public void silenceTheCall()
+    public void silenceTheCall(Context context)
     {
+        System.out.println("silencing the call");
 
+
+
+
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+//        {
+//            Toast.makeText(context,"in this method",Toast.LENGTH_LONG).show();
+//            int adJustMute;
+//            if (true) adJustMute = AudioManager.ADJUST_MUTE;
+//            else adJustMute = AudioManager.ADJUST_UNMUTE;
+//
+//            audioManager.adjustStreamVolume(AudioManager.STREAM_RING, adJustMute, 0);
+//        }
+//        else {
+//            Toast.makeText(context,"in that method",Toast.LENGTH_LONG).show();
+//            audioManager.setStreamMute(AudioManager.STREAM_RING, true);
+//        }
+//        Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALL);
+//        ringtone = RingtoneManager.getRingtone(context, notification);
+//        ringtone.play();
+    }
+    public HashSet<String> getContacts(Context context)
+    {
+        HashSet<String> contacts = new HashSet<>();
+
+        ContentResolver contentResolver = context.getContentResolver();
+        Cursor cursor = contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,null,null,null,null);
+        while(cursor.moveToNext())
+        {
+            String num =  cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+            contacts.add(num);
+        }
+        return contacts;
     }
 }

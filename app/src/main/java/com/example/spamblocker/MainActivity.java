@@ -1,4 +1,5 @@
 package com.example.spamblocker;
+//new
 
 import android.Manifest;
 import android.app.Activity;
@@ -13,6 +14,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.Toast;
@@ -21,14 +23,17 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.textfield.TextInputLayout;
 
-public class MainActivity extends AppCompatActivity {
+import static android.os.Build.VERSION_CODES.M;
 
+public class MainActivity<M> extends AppCompatActivity
+{
     String[] items =  {"Reject Automatically","Ring Silent"};
-    AutoCompleteTextView autoCompleteTxt;
-    ArrayAdapter<String> adapterItems;
+
+    static AutoCompleteTextView autoCompleteTxt;
     static Switch flag140, flagoutsidephonebook, flagoutsideIndia, flaghidden ;
-    static AutoCompleteTextView autoCompleteTextView;
     static TextInputLayout textInputLayout;
+    ArrayAdapter<String> adapterItems;
+    Button button;
 
     private static final int PERMISSION_REQUEST_READ_PHONE_STATE = 0;
 
@@ -37,6 +42,23 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        SharedPreferences sharedPreferences = getSharedPreferences("save", MODE_PRIVATE);
+
+        autoCompleteTxt = findViewById(R.id.auto_complete_txt);
+        autoCompleteTxt.setAdapter(adapterItems);
+        autoCompleteTxt.setThreshold(1000);
+        autoCompleteTxt.setText(items[sharedPreferences.getInt("cutMethod", 0)]);
+
+        autoCompleteTxt.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String item = items[position];
+                Toast.makeText(getApplicationContext(),"Item: "+item,Toast.LENGTH_SHORT).show();
+                SharedPreferences.Editor editor = getSharedPreferences("save", Activity.MODE_PRIVATE).edit();
+                editor.putInt("cutMethod", position);
+                editor.apply();
+            }
+        });
 
         if (!foregroundServiceRunning()) {
             Intent serviceIntent = new Intent(this, MyForegroundService.class);
@@ -48,29 +70,24 @@ public class MainActivity extends AppCompatActivity {
         flagoutsidephonebook = (Switch) findViewById(R.id.btnphnbook);
         flagoutsideIndia = (Switch) findViewById(R.id.btnforeign);
         flaghidden = (Switch) findViewById(R.id.btnhidden);
-        autoCompleteTextView = (AutoCompleteTextView) findViewById(R.id.auto_complete_txt);
-        textInputLayout = (TextInputLayout) findViewById(R.id.dropdown);
 
-        SharedPreferences sharedPreferences = getSharedPreferences("save", MODE_PRIVATE);
+        textInputLayout = (TextInputLayout) findViewById(R.id.dropdown);
+        button = (Button) findViewById(R.id.btnlogs);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(),callLogs.class);
+                startActivity(intent);
+            }
+        });
+
+//        textInputLayout.setText()
+//        textInputLayout.setText(items[sharedPreferences.getInt("cutMethod",0)]);
+
         flag140.setChecked(sharedPreferences.getBoolean("value", false));
         flagoutsidephonebook.setChecked(sharedPreferences.getBoolean("value2", false));
         flagoutsideIndia.setChecked(sharedPreferences.getBoolean("value3",false));
         flaghidden.setChecked(sharedPreferences.getBoolean("value4",false));
-        autoCompleteTextView.setText(items[sharedPreferences.getInt("cutMethod", 1)]);
-
-
-        autoCompleteTxt = findViewById(R.id.auto_complete_txt);
-        adapterItems = new ArrayAdapter<String>(this,R.layout.list_item,items);
-        autoCompleteTxt.setAdapter(adapterItems);
-        autoCompleteTxt.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String item = parent.getItemAtPosition(position).toString();
-                SharedPreferences.Editor editor = getSharedPreferences("save", Activity.MODE_PRIVATE).edit();
-                editor.putInt("cutMethod", position);
-                editor.apply();
-            }
-        });
 
 
 
@@ -99,7 +116,6 @@ public class MainActivity extends AppCompatActivity {
                     editor.putBoolean("value2", true);
                     editor.apply();
                     flagoutsidephonebook.setChecked(true);
-                    Toast.makeText(getBaseContext(), "switch1 ON", Toast.LENGTH_SHORT).show();
                 } else {
                     editor.putBoolean("value2", false);
                     editor.apply();
@@ -141,10 +157,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_DENIED || checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_DENIED || checkSelfPermission(Manifest.permission.ANSWER_PHONE_CALLS) == PackageManager.PERMISSION_DENIED || checkSelfPermission(Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_DENIED) {
-                String[] permissions = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.CALL_PHONE, Manifest.permission.READ_CALL_LOG, Manifest.permission.ANSWER_PHONE_CALLS};
+        if (Build.VERSION.SDK_INT >= M) {
+            if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_DENIED || checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_DENIED || checkSelfPermission(Manifest.permission.ANSWER_PHONE_CALLS) == PackageManager.PERMISSION_DENIED || checkSelfPermission(Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_DENIED || checkSelfPermission(Manifest.permission.READ_CONTACTS)==PackageManager.PERMISSION_DENIED) {
+                String[] permissions = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.CALL_PHONE, Manifest.permission.READ_CALL_LOG, Manifest.permission.ANSWER_PHONE_CALLS,Manifest.permission.READ_CONTACTS};
                 requestPermissions(permissions, PERMISSION_REQUEST_READ_PHONE_STATE);
             }
         }
@@ -169,7 +184,6 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     Toast.makeText(this, "Permission NOT granted: " + PERMISSION_REQUEST_READ_PHONE_STATE, Toast.LENGTH_SHORT).show();
                 }
-
                 return;
             }
         }

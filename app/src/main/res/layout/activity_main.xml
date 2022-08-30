@@ -8,12 +8,13 @@
 
     <com.google.android.material.textfield.TextInputLayout
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-        android:layout_width="match_parent"
         android:id="@+id/dropdown"
-        android:layout_marginTop="35dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="35dp"
         android:layout_alignParentTop="true"
-        android:hint="@string/select">
+        android:hint="@string/select"
+        >
 
         <AutoCompleteTextView
             android:id="@+id/auto_complete_txt"
@@ -85,5 +86,15 @@
         android:track="@drawable/track"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btn140" />
+
+    <Button
+        android:id="@+id/btnlogs"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:layout_below="@+id/btnforeign"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="0dp"
+        android:layout_marginTop="233dp"
+        android:text="Blocked Call Logs" />
 
 </RelativeLayout>
