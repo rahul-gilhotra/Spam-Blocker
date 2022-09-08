@@ -23,14 +23,19 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.textfield.TextInputLayout;
 
+import java.util.ArrayList;
+
 import static android.os.Build.VERSION_CODES.M;
 
 public class MainActivity<M> extends AppCompatActivity
 {
+
+
+
     String[] items =  {"Reject Automatically","Ring Silent"};
 
     static AutoCompleteTextView autoCompleteTxt;
-    static Switch flag140, flagoutsidephonebook, flagoutsideIndia, flaghidden ;
+    static Switch flag140, flagoutsidephonebook, flagoutsideIndia, flaghidden;
     static TextInputLayout textInputLayout;
     ArrayAdapter<String> adapterItems;
     Button button;
@@ -46,7 +51,7 @@ public class MainActivity<M> extends AppCompatActivity
 
         autoCompleteTxt = findViewById(R.id.auto_complete_txt);
         autoCompleteTxt.setAdapter(adapterItems);
-        autoCompleteTxt.setThreshold(1000);
+        autoCompleteTxt.setThreshold(100);
         autoCompleteTxt.setText(items[sharedPreferences.getInt("cutMethod", 0)]);
 
         autoCompleteTxt.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -65,7 +70,6 @@ public class MainActivity<M> extends AppCompatActivity
             startForegroundService(serviceIntent);
         }
 
-
         flag140 = (Switch) findViewById(R.id.btn140);
         flagoutsidephonebook = (Switch) findViewById(R.id.btnphnbook);
         flagoutsideIndia = (Switch) findViewById(R.id.btnforeign);
@@ -80,9 +84,6 @@ public class MainActivity<M> extends AppCompatActivity
                 startActivity(intent);
             }
         });
-
-//        textInputLayout.setText()
-//        textInputLayout.setText(items[sharedPreferences.getInt("cutMethod",0)]);
 
         flag140.setChecked(sharedPreferences.getBoolean("value", false));
         flagoutsidephonebook.setChecked(sharedPreferences.getBoolean("value2", false));

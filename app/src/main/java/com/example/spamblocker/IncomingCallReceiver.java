@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.media.AudioManager;
 import android.os.Build;
 import android.provider.ContactsContract;
 import android.telecom.TelecomManager;
@@ -35,8 +36,8 @@ public class IncomingCallReceiver extends BroadcastReceiver
 {
     @RequiresApi(api = Build.VERSION_CODES.P)
     @Override
-    public void onReceive(Context context, Intent intent) {
-
+    public void onReceive(Context context, Intent intent)
+    {
         String value = String.valueOf(textInputLayout.getEditText().getText());
         boolean cutMethod = value.equals("Reject Automatically") ? true : false;
 
@@ -51,7 +52,7 @@ public class IncomingCallReceiver extends BroadcastReceiver
             {
                 int shouldblockresult = shouldBlock(number,context);
                 Toast.makeText(context,String.valueOf(shouldblockresult),Toast.LENGTH_LONG).show();
-                if(shouldblockresult>-4)
+                if(shouldblockresult<0)
                 {
                     if(cutMethod) hangUp(context);
                     else silenceTheCall(context);
@@ -61,8 +62,13 @@ public class IncomingCallReceiver extends BroadcastReceiver
                     Date today = Calendar.getInstance().getTime();
                     String todayAsString = df.format(today);
 
+                    String reason="";
+                    if(shouldblockresult==-1) reason = "SPAM";
+                    if(shouldblockresult==-2) reason = "OUT OF INDIA";
+                    if(shouldblockresult==-3) reason = "HIDDEN";
+                    if(shouldblockresult==-1 || shouldblockresult==1) reason = "OUT OF CONTACTS";
 
-                    Info info = new Info(number,todayAsString,String.valueOf(shouldblockresult));
+                    Info info = new Info(number,todayAsString,reason);
                     saveData(context,info);
                 }
             }
@@ -78,21 +84,20 @@ public class IncomingCallReceiver extends BroadcastReceiver
         boolean cuthidden = flaghidden.isChecked();
         boolean cutoutofcontacts = flagoutsidephonebook.isChecked();
 
-        if(cut140 && number.substring(0,6)=="+91140") return 1;
+        if(cut140 && number.substring(0,6)=="+91140") return -1;
 
-        if(cutforeign && !number.startsWith("+91")) return 2;
+        if(cutforeign && !number.startsWith("+91")) return -2;
 
-        if(cuthidden && number==null) return 3;
+        if(cuthidden && number==null) return -3;
 
         if(cutoutofcontacts)
         {
             HashSet<String> contactNumbers = getContacts(context);
 
-            if(contactNumbers.contains(number)) return -1;
-            if(contactNumbers.contains(number.substring(3,8)+" "+number.substring(8))) return -1;
-            return 4;
+            if(contactNumbers.contains(number) || contactNumbers.contains(number.substring(3,8))) return 1;
+            return -4;
         }
-        return -1;
+        return 1;
     }
     public void saveData(Context context, Info info)
     {
@@ -121,29 +126,22 @@ public class IncomingCallReceiver extends BroadcastReceiver
             boolean success = tm.endCall();
         }
     }
-    public void silenceTheCall(Context context)
+    private void silenceTheCall(Context context)
     {
         System.out.println("silencing the call");
 
+        AudioManager audioManager;
+        audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        {
+            Toast.makeText(context,"in this method",Toast.LENGTH_LONG).show();
+            int adJustMute;
+            if (true) adJustMute = AudioManager.ADJUST_MUTE;
+            else adJustMute = AudioManager.ADJUST_UNMUTE;
 
-
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-//        {
-//            Toast.makeText(context,"in this method",Toast.LENGTH_LONG).show();
-//            int adJustMute;
-//            if (true) adJustMute = AudioManager.ADJUST_MUTE;
-//            else adJustMute = AudioManager.ADJUST_UNMUTE;
-//
-//            audioManager.adjustStreamVolume(AudioManager.STREAM_RING, adJustMute, 0);
-//        }
-//        else {
-//            Toast.makeText(context,"in that method",Toast.LENGTH_LONG).show();
-//            audioManager.setStreamMute(AudioManager.STREAM_RING, true);
-//        }
-//        Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALL);
-//        ringtone = RingtoneManager.getRingtone(context, notification);
-//        ringtone.play();
+            audioManager.adjustStreamVolume(AudioManager.STREAM_RING, adJustMute, 0);
+        }
     }
     public HashSet<String> getContacts(Context context)
     {
